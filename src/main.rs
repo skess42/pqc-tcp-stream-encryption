@@ -3,7 +3,7 @@ use oqs::kem::Kem;
 use oqs::sig::Sig;
 use oqs::*;
 use serde::{Deserialize, Serialize};
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::io::{Error, ErrorKind, Read, Write};
 
 mod client;
@@ -45,13 +45,39 @@ fn main() -> std::io::Result<()> {
         let server_sig_pub = try_read_public_key(&sigalg, &server_key)?;
         let client_sig_pub = try_read_public_key(&sigalg, &client_key)?;
 
-        // TODO protect against replay attacks
         if mode == "server" {
             let server_sig_sec = try_read_private_key(&sigalg, &server_key)?;
             server::listen_for_incoming_request(client_sig_pub, server_sig_sec, &kemalg, &sigalg)?;
         } else {
             let client_sig_sec = try_read_private_key(&sigalg, &client_key)?;
-            client::http_request(&client_sig_sec, &server_sig_pub, kemalg, sigalg)?;
+
+            let mut handshake_measurement = OpenOptions::new()
+                .write(true)
+                .append(true)
+                .open("handshake-measurement")
+                .unwrap();
+
+            let mut request_measurement = OpenOptions::new()
+                .write(true)
+                .append(true)
+                .open("request-measurement")
+                .unwrap();
+
+            for _ in 0..1000 {
+                // measure 1000 runs
+                let sigalg = Sig::new(sig::Algorithm::Dilithium2)
+                    .map_err(|_| other_io_error("Couldn't find signature algorithm"))?;
+                let kemalg = Kem::new(kem::Algorithm::Saber)
+                    .map_err(|_| other_io_error("Couldn't find kem algorithm"))?;
+                client::http_request(
+                    &client_sig_sec,
+                    &server_sig_pub,
+                    kemalg,
+                    sigalg,
+                    &mut handshake_measurement,
+                    &mut request_measurement,
+                )?;
+            }
         }
     }
 
