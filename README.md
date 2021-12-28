@@ -1,7 +1,24 @@
 # pqc-tcp-stream-encryption
 
 This is a proof-of-concept implementation of a post-quantum secure TCP stream encryption.
+
 It is based on oqs-rs: https://github.com/thomwiggers/oqs-rs/tree/7356ebc96abf3e945e7f431c3ca5f0042b63bc9d
+
+## Installation of oqs-rs
+
+```
+git clone https://github.com/thomwiggers/oqs-rs.git
+cd oqs-rs
+git checkout 7356ebc
+cd oqs-sys
+rm -r liboqs/
+git clone https://github.com/thomwiggers/liboqs.git
+cd liboqs
+git checkout 1139feed
+mkdir build && cd build
+cmake -GNinja ..
+ninja
+```
 
 ## Usage
 
